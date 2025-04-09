@@ -1,0 +1,391 @@
+= Probeklausur in POS
+:source-highlighter: rouge
+:icons: font
+:pdf-page-header: true
+:lang: DE
+:hyphens:
+ifndef::env-github[:icons: font]
+ifdef::env-github[]
+:caution-caption: :fire:
+:important-caption: :exclamation:
+:note-caption: :paperclip:
+:tip-caption: :bulb:
+:warning-caption: :warning:
+endif::[]
+
+[.lead]
+Klasse: 5CHIF +
+Datum: 19. März 2025 +
+Arbeitszeit: 5 UE
+
+== Teilaufgabe 1: Object Relation Mapping und Database Queries
+
+Bilden Sie das dargestellte Modell entsprechend Ihres gewählten Technologie Stacks sauber ab.
+Beachten Sie dabei die geforderten Anforderungen an einzelne Modellklassen.
+
+[plantuml,format=svg]
+----
+@startuml
+hide empty methods
+
+class Email << (R,#FFEECC) RichType >> {
+    value: String <<nn>>
+}
+
+
+entity Article << Entity >>{
+    number: Integer <<nn>>
+    name: String <<nn>>
+    price: Decimal <<nn>>
+}
+
+note left of Article::number
+  PK
+end note
+
+
+class Address << (V,#CCEEFF) ValueObject >> {
+    street: String <<nn>>
+    zip: String <<nn>>
+    city: String <<nn>>
+}
+
+entity Company << Entity >> {
+    name: String <<nn>>
+    address: Address <<nn>>
+}
+
+Address --* Company : contains
+
+entity User << Entity >> {
+    firstName: String <<nn>>
+    lastName: String <<nn>>
+    email: Email <<nn>>
+}
+
+User --> Email
+
+enum CustomerType << Enum >> {
+    B2B <<B>>
+    B2C <<C>>
+}
+
+entity Customer << Entity >> {
+    addresses: List<Address> <<nn>>
+    type: CustomerType <<nn>>
+    note: String
+}
+
+Address --* Customer : contains
+Customer --> CustomerType : is
+Customer -up-|> User
+
+entity Employee << Entity >> {
+    company: Company <<nn>>
+}
+
+Employee -up-|> User
+Employee --> Company : works for
+
+entity Invoice << Entity >> {
+    number: Integer <<nn>>
+    date: LocalDateTime <<nn>>
+    customer: Customer <<nn>>
+    employee: Employee <<nn>>
+    invoiceItems: List<InvoiceItem> <<nn>>
+}
+
+Invoice --> Customer : is for
+Invoice --> Employee : has
+
+entity InvoiceItem << Entity >> {
+    invoice: Invoice <<nn>>
+    article: Article <<nn>>
+    quantity: Integer <<nn>>
+    price: Decimal <<nn>>
+}
+
+InvoiceItem --> Article : is for
+InvoiceItem --> Invoice : belongs to
+@enduml
+----
+
+=== Arbeitsauftrag
+
+==== Erstellung der Datenbankzugriffe
+
+Erstellen Sie die üblichen Datenbank Zugriffsobjekte ihres gewählten Technologie Stacks.
+Fügen Sie - wenn es die Abfragen erleichtet - auch zusätzliche Navigations hinzu.
+Bachten Sie Attribute Constraints wie *not null* (`nn`).
+Setzen Sie folgende Abfragen um:
+
+* Listen Sie alle Artikel auf, die innerhalb eines bestimmten Zeitraumes gekauft wurden.
+Geben Sie Artikelnummer, Artikelname, Kaufdatum und den Vor- und Zunamen des Kunden aus.
+
+* Listen Sie alle Verkäufe auf, die ein bestimmter Mitarbeiter getätigt hat.
+Geben Sie die Rechnungsnummer, das Rechnungsdatum, den Vor- und Zunamen des Kunden und den Gesamtbetrag aus.
+
+==== Verfassen von Tests
+
+Stellen Sie durch automatisierte Tests sicher, dass:
+
+* Sie alle Elemente des Modells richtig gemapped haben und diese in der DB gespeichert werden.
+* Sie notwendige Umschlüsselungen (Richtypes, Enumerations) in beide Richtungen richtig implementiert haben.
+* Die geforderten Abfragen die richtigen Ergebnisse liefern und nur die geforderten (!) Daten liefern.
+
+== Teilaufgabe 2: Services und Unittests
+
+Es wird Ihnen zu Testzwecken eine Datenzugriffs-Schnittstelle sowie die zur Implementierung notwendigen Datenklassen zur Verfügung gestellt.
+Sie sollen kein OR-Mapping implementieren, sondern eine isolierte Umsetzung des Services anstreben.
+
+Das nachfolgende Modell zeigt eine Umsetzung eines Scooter Sharing Services.
+Kunden können zwischen 2 Abrechnungsmethoden wählen:
+
+* _Pay as you go:_ Der Kunde zahlt pro gefahrenen Kilometer.
+* _Included Kilometers:_ Der Kunde zahlt einen monatlichen Beitrag und erhält eine bestimmte Anzahl an Freikilometern.
+  Die freien Kilometer gelten pro Fahrt.
+  Hat ein Kunde z. B. 2 Freikilometer, so wird bei Fahrt A, die 3 km lang ist, 1 km berechnet.
+  Bei Fahrt B, die 4 km lang ist, werden 2 km berechnet.
+
+Beim Entsperren mit der App wird ein _Trip_ gestartet.
+Der integrierte Tracker des Scooters übermittelt in regelmäßigen Abständen die Position und den Kilometerstand als _TripLog_.
+Dadurch ist eine Abrechnung auch dann möglich, wenn kein durchgehendes GPS Signal verfügbar ist (z. B. Unterführungen, etc).
+Die Länge einer Fahrt (_Trip_) ist dann die Differenz zwischen niedigsten und höchsten Kilometerstand der _TripLogs_ dieser Fahrt.
+
+Die Preise für den gefahrenen Kilometer variieren je nach Modell und sind in der _Scooter_ Klasse hinterlegt.
+Scooter mit Sitz und hoher Reichweite haben z. B. einen höheren Preis pro Kilometer als Scooter ohne Sitz.
+
+Wird ein Scooter abgestellt, wird der _Trip_ beendet und die Felder _end_ und parkingLocation werden gesetzt.
+So ist erkennbar, welche Trips noch laufen und welche bereits beendet sind.
+
+[plantuml,format=svg]
+----
+@startuml
+
+hide empty attributes
+hide empty members
+
+class Location  << (V,#CCEEFF) ValueObject >>{
+    longitude: Decimal <<nn>>
+    latitude: Decimal <<nn>>
+}
+
+entity Scooter << Entity >> {
+    manufacturerId: String <<nn>>
+    model: String <<nn>>
+    pricePerKilometer: Decimal <<nn>>
+}
+
+entity User << Entity >>{
+    email: String <<nn>>
+    freeKilometers: Integer <<nn>>
+}
+
+entity Trip << Entity >> {
+    key: String <<nn>>
+    user: User <<nn>>
+    scooter: Scooter <<nn>>
+    begin: LocalDateTime <<nn>>
+    end: LocalDateTime
+    parkingLocation: Location
+    tripLogs: List<TripLog> <<nn>>
+}
+
+Trip --> User
+Trip --> Scooter
+Trip --> Location
+
+entity TripLog << Entity >> {
+    trip: Trip <<nn>>
+    timestamp: LocalDateTime <<nn>>
+    location: Location <<nn>>
+    mileageInMeters: Integer <<nn>>
+}
+
+TripLog --* Trip
+TripLog --> Location
+
+@enduml
+----
+
+=== Arbeitsauftrag
+
+==== Implementierung von Servicemethoden
+
+Schreiben Sie eine Methode zur Abrechnung von Kunden (Usern).
+Geben Sie eine Map mit den User IDs und den Abrechnungsinformationen *pro Trip* zurück.
+Jedes Element der Liste ist ein Trip und enthält:
+
+* Die gefahrenen Kilometer des Trips.
+* Der Preis des Trips.
+
+Für die Preiskalkulation sollen die Felder _pricePerKilometer_ und _freeKilometers_ berücksichtigt werden.
+Es sollen nur abgeschlossene Trips berücksichtigt werden, d. h. alle Trips, wo das Feld _end_ gesetzt ist.
+
+[%header,cols="1,3"]
+|===
+| Key       | Value
+| User ID 1 | Liste der gefahrenen Kilometer und des Preises
+| User ID 2 | Liste der gefahrenen Kilometer und des Preises
+| User ID 3 | Liste der gefahrenen Kilometer und des Preises
+| ...       | ...
+|===
+
+==== Verfassen von Tests
+
+Stellen Sie durch automatisierte Tests sicher, dass:
+
+* Sie die Statistik richtig berechnen und 
+* die Datenstrukturen richtig sortiert bereitstellen.
+
+== Teilaufgabe 3: REST(ful) API
+
+Für das vorige Modell der Scooter Sharing App soll eine RESTful API implementiert werden.
+Der Key in Trip soll vorab auf Validität geprüft werden.
+Ein Trip Key kann mit folgendem regulären Ausdruck geprüft werden: `^TR[0-9]+$`
+
+=== Arbeitsauftrag
+
+Implementieren Sie die folgenden REST API Routen.
+Testen Sie entsprechend des angegebenen Antwortverhaltens (Status-Code, Responses).
+
+
+==== GET /trips/{key}?includeLog=true
+
+Diese REST API Route soll einen bestimmten Trip mitsamt der Logeinträge retournieren.
+Wird der optionale Parameter _includeLog_ mit dem Wert true mitgegeben (false ist der Default-Wert), soll die Antwort die Logeinträge enthalten.
+Ist der parameter false, soll ein leeres Array zurückgegeben werden.
+
+.Erwartete HTTP-Antworten:
+[%header,cols="1,3"]
+|===
+| HTTP Status | Bedingung
+| 200	| Ein _TripDto_, welches optional _TripLogDtos_ enthält
+| 400	| Für einen fehlerhaften Key (inkl. RFC-9457 ProblemDetail im Body)
+| 404	| Für einen unbekannten Key (inkl. RFC-9457 ProblemDetail im Body)
+|===
+
+==== Schematische Response (_TripDto_):
+
+[source,typescript]
+----
+{
+    "key": string,
+    "userEmail": string,
+    "scooterManufacturerId": string,
+    "begin": string,
+    "end": string|null,
+    "logs": [
+        {
+            "timestamp": string,
+            "longitude": number,
+            "latitude": number
+            "mileageInMeters": number
+        }
+    ]
+}
+----
+
+==== PATCH /trips/{key}
+
+Diese REST API Route soll die Daten am Ende eines Trips aktualisieren.
+Dabei werden die Felder _End_ und _ParkingLocation_ auf die entsprechenden Werte gesetzt.
+
+.Erwartete HTTP-Antworten:
+[%header,cols="1,3"]
+|===
+| HTTP Status | Bedingung
+| 200	| Ein _TripDto_ Objekt.
+| 400	| Für einen fehlerhaften Key. (inkl. RFC-9457 ProblemDetail im Body)
+| 400	| Wenn ein Trip, der bereits beendet ist, modifiziert werden soll. (inkl. RFC-9457 ProblemDetail im Body)
+| 404	| Für einen unbekannten Key. (inkl. RFC-9457 ProblemDetail im Body)
+|===
+
+===== Payload (_UpdateTripCommand_):
+
+[source,typescript]
+----
+{
+    "end": string,
+    "longitude": number,
+    "latitude": number
+}
+----
+
+==== Schematische Response (_TripDto_):
+
+Siehe GET Route.
+
+
+== Bewertung
+
+Die Bewertung erfolgt nach folgenden Kriterien:
+
+=== Teilaufgabe 1 (34 Punkte, 50% der Gesamtpunkte)
+
+* *(1 P)* Die Klasse _Company_ ist korrekt als Entity abgebildet.
+* *(1 P)* Die Klasse _Company_ besitzt ein korrekt konfiguriertes value object _Address_.
+* *(1 P)* Die Klasse _Address_ wurde korrekt als value object abgebildet.
+* *(1 P)* Die Klasse _User_ ist korrekt als Entity abgebildet.
+* *(1 P)* Die Klasse _Employee_ ist korrekt als Entity abgebildet.
+* *(1 P)* Die Vererbung von _User_ zu _Employee_ ist korrekt abgebildet.
+* *(1 P)* Die Klasse _Customer_ ist korrekt als Entity abgebildet.
+* *(1 P)* Die Vererbung von _User_ zu _Customer_ ist korrekt abgebildet.
+* *(1 P)* Die Klasse _Customer_ besitzt ein konfiguriertes value object _Address_.
+* *(1 P)* Die Klasse _Invoice_ ist korrekt als Entity abgebildet.
+* *(1 P)* Die Klasse _Article_ ist korrekt als Entity abgebildet.
+* *(1 P)* Die Klasse _InvoiceItem_ ist korrekt als Entity abgebildet.
+* *(2 P)* Der rich type _Email_ wird korrekt abgebildet.
+* *(2 P)* Die enum _CustomerType_ wird mit einem Converter korrekt gespeichert.
+* *(2 P)* Der Unittest _PersistRichTypesSuccessTest_ hat einen korrekten Aufbau und läuft durch.
+* *(2 P)* Der Unittest _PersistEnumSuccessTest_ hat einen korrekten Aufbau und läuft durch.
+* *(2 P)* Der Unittest _PersistValueObjectInCompanySuccessTest_ hat einen korrekten Aufbau und läuft durch.
+* *(2 P)* Der Unittest _PersistValueObjectInCustomerSuccessTest_ hat einen korrekten Aufbau und läuft durch.
+* *(2 P)* Der Unittest _PersistInvoiceItemSuccessTest_ hat einen korrekten Aufbau und läuft durch.
+
+* *(2 P)* Die Methode _GetArticleWithSales_ liefert ein korrektes Ergebnis und verwendet LINQ.
+* *(2 P)* Der Unittest _GetArticleWithSalesInfoSuccessTest_ hat einen korrekten Aufbau und läuft durch.
+* *(2 P)* Die Methode _GetEmployeeWithSales_ liefert ein korrektes Ergebnis und verwendet LINQ.
+* *(2 P)* Der Unittest _GetEmployeeWithSalesSuccessTest_ hat einen korrekten Aufbau und läuft durch.
+
+=== Teilaufgabe 2 (12 Punkte, 16.7% der Gesamtpunkte)
+
+* *(1 P)* Die Methode _CalculateTripInfos_ filtert die Trips korrekt (nur beendete Trips).
+* *(1 P)* Die Methode _CalculateTripInfos_ liefert ein Dictionary mit einem Eintrag pro User.
+* *(1 P)* Die Methode _CalculateTripInfos_ liefert ein Dictionary mit einer Liste von TripInfo Objekten pro User.
+* *(1 P)* Die Methode _CalculateTripInfos_ liefert ein Dictionary mit einem TripInfo Objekt pro Trip.
+* *(1 P)* Die Methode _CalculateTripInfos_ berechnet die gefahrenen Kilometer aufgrund des Minimal- und Maximalwertes des Properties _MileageInMeters_ im TripLog korrekt.
+* *(1 P)* Die Methode _CalculateTripInfos_ ermittelt den Fahrpreis unter Berücksichtigung des Properties _PricePerKilometer_ korrekt.
+* *(1 P)* Die Methode _CalculateTripInfos_ ermittelt den Fahrpreis unter Berücksichtigung des Properties _FreeKilometers_ korrekt.
+* *(5 P)* Der vorgegebene Unittest _CalculateTripInfos_ReturnsCorrectResult_ läuft durch.
+
+=== Teilaufgabe 3 (24 Punkte, 33.3% der Gesamtpunkte)
+
+* *(1 P)* Der GET Endpunkt wurde richtig annotiert und ist in ASP.NET Core verfügbar.
+* *(1 P)* Der GET Endpunkt filtert die Daten korrekt.
+* *(1 P)* Der GET Endpunkt liefert das korrekte Verhalten im Fall eines ungültigen Keys.
+* *(1 P)* Der GET Endpunkt liefert das korrekte Verhalten im Fall eines nicht vorhandenen Keys.
+* *(2 P)* Der GET Endpunkt verwendet den Query Parameter _includeLog_ korrekt.
+* *(1 P)* Die DTO Klasse _TripDto_ wurde korrekt implementiert.
+* *(1 P)* Die DTO Klasse _TripLogDto_ wurde korrekt implementiert.
+* *(2 P)* Der GET Endpunkt liefert das korrekte Ergebnis im Erfolgsfall.
+* *(3 P)* Der Integration Test beweist die korrekte Implementierung des GET Endpunktes.
+
+* *(1 P)* Der PATCH Endpunkt wurde richtig annotiert und ist in ASP.NET Core verfügbar.
+* *(1 P)* Der PATCH Endpunkt liefert das korrekte Verhalten im Fall eines ungültigen Keys.
+* *(1 P)* Der PATCH Endpunkt liefert das korrekte Verhalten im Fall eines nicht vorhandenen Keys.
+* *(1 P)* Der PATCH Endpunkt liefert das korrekte Verhalten für einen Trip, der bereits beendet ist.
+* *(1 P)* Der PATCH Endpunkt aktualisiert die Daten korrekt in der Datenbank.
+* *(1 P)* Die Command Klasse _UpdateTripCommand_ wurde korrekt implementiert.
+* *(2 P)* Der PATCH Endpunkt liefert das korrekte Ergebnis im Erfolgsfall.
+* *(3 P)* Der Integration Test beweist die korrekte Implementierung des PATCH Endpunktes.
+
+=== Beurteilung:
+
+72 - 64 Punkte: Sehr gut (1), +
+63 - 55 Punkte: Gut (2), +
+54 - 46 Punkte: Befriedigend (3), +
+45 - 37 Punkte: Genügend (4), +
+36 - 0 Punkte: Nicht genügend (5)
+
+**Viel Erfolg!**

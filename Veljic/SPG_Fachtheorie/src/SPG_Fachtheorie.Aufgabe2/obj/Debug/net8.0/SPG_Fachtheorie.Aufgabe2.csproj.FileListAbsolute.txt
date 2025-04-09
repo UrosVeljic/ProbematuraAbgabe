@@ -1,0 +1,13 @@
+C:\Scratch\Aufgabe2\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.deps.json
+C:\Scratch\Aufgabe2\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.dll
+C:\Scratch\Aufgabe2\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.pdb
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.csproj.AssemblyReference.cache
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.AssemblyInfoInputs.cache
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.AssemblyInfo.cs
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.csproj.CoreCompileInputs.cache
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.sourcelink.json
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.dll
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\refint\SPG_Fachtheorie.Aufgabe2.dll
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\SPG_Fachtheorie.Aufgabe2.pdb
+C:\Users\velji\OneDrive\Desktop\Veljic\SPG_Fachtheorie\src\SPG_Fachtheorie.Aufgabe2\obj\Debug\net8.0\ref\SPG_Fachtheorie.Aufgabe2.dll
